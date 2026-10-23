@@ -200,7 +200,7 @@
             align-items: center;
             gap: 10px;
             color: var(--chrome-text);
-            font-size: 16px;
+            font-size: 50px;
             font-weight: 700;
         }
 
@@ -600,7 +600,7 @@
             padding: 32px 48px;
             font-size: 14px;
             display: flex;
-            justify-content: space-between;
+            justify-content: space-evenly;
             gap: 24px;
         }
 
@@ -672,6 +672,29 @@
             font-weight: 700;
             line-height: 1.3;
             color: var(--text);
+        }
+
+        /* Learn: the embedded video keeps a 16:9 frame at every width */
+        .video-frame {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: var(--radius-card);
+            overflow: hidden;
+            background: var(--preview-bg);
+        }
+
+        .video-frame iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .info-text a {
+            color: var(--text);
+            font-weight: 700;
         }
 
         @media (max-width: 1080px) {
@@ -758,6 +781,7 @@
         <nav class="nav-tabs" aria-label="Primary">
             <button class="tab-btn active" data-tab="encode">Encode</button>
             <button class="tab-btn" data-tab="decode">Decode</button>
+            <button class="tab-btn" data-tab="learn">Learn</button>
         </nav>
         <span></span>
     </header>
@@ -893,6 +917,47 @@
                 </div>
             </div>
         </div>
+        <!-- LEARN TAB -->
+        <div id="learn" class="tab-content">
+            <section class="hero-chapter">
+                <div class="hero-inner">
+                    <div>
+                        <h1>Learn how it works</h1>
+                        <p class="sub">Watch how a hidden message fits inside ordinary pixels, then try the round trip yourself.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="body-inner">
+                <div class="bento">
+                    <div class="tile tile-full">
+                        <div class="tile-title">Secrets Hidden in Images (Steganography)</div>
+                        <div class="video-frame">
+                            <iframe src="https://www.youtube-nocookie.com/embed/TWEXCYQKyDc" title="Secrets Hidden in Images (Steganography), from Computerphile" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                        </div>
+                        <p class="info-text">From Computerphile on YouTube. <a href="https://www.youtube.com/watch?v=TWEXCYQKyDc" target="_blank" rel="noopener">Watch on YouTube</a></p>
+                    </div>
+
+                    <div class="tile tile-wide">
+                        <div class="note-title">What is steganography?</div>
+                        <p class="note-text">Steganography hides a secret message inside an ordinary file, such as an image, audio clip or document, so that its presence goes unnoticed. It is often paired with encryption. The article covers how it works, the main types (text, image, audio, video and network), its advantages, and how it differs from cryptography.</p>
+                        <p class="info-text">From GeeksforGeeks. <a href="https://www.geeksforgeeks.org/cybersecurity/what-is-steganography/" target="_blank" rel="noopener">Read the article</a></p>
+                    </div>
+
+                    <div class="tile">
+                        <div class="note-title">The mechanism in brief</div>
+                        <p class="note-text">Each character becomes eight bits. Each bit is written into the lowest bit of one colour channel, a change too small to see. A ninth channel marks where the message ends.</p>
+                    </div>
+
+                    <div class="tile">
+                        <div class="note-title">Try the round trip</div>
+                        <p class="note-text">Encode a message into an image, then decode the file you downloaded.</p>
+                        <button class="btn-secondary" type="button" data-goto="encode">Go to Encode</button>
+                        <button class="btn-secondary" type="button" data-goto="decode">Go to Decode</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer class="footer-section">
@@ -969,6 +1034,13 @@
             btn.addEventListener("pointerup", () => {
                 if (!motionOK) return;
                 gsap.to(btn, { scale: 1, y: btn.matches(":hover") ? -2 : 0, duration: 0.2, ease: "power2.out", overwrite: "auto" });
+            });
+        });
+
+        // Buttons that jump to another tab
+        document.querySelectorAll("[data-goto]").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                document.querySelector(`.tab-btn[data-tab="${btn.dataset.goto}"]`).click();
             });
         });
 
