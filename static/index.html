@@ -130,7 +130,18 @@
             color: var(--body);
             background: var(--page);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* The main area takes the spare height, so the footer sits at the bottom of the screen on short pages */
+        main {
+            flex: 1 0 auto;
+        }
+
+        .footer-section {
+            margin-top: auto;
         }
 
         /* Top chrome: the utility bar and the header stay in view while the page scrolls */
