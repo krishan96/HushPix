@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImgSecrets - LSB Steganography</title>
+    <script>
+        // Apply the saved theme before first paint. Light is the default.
+        (function () {
+            var theme = "light";
+            try {
+                var saved = localStorage.getItem("imgsecrets-theme");
+                if (saved === "dark" || saved === "light") theme = saved;
+            } catch (e) { /* storage unavailable: keep the default */ }
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> <!-- taste-skill-ignore -->
+    <style>
+        /*
+          Two skins on one structure, switched by data-theme on <html>.
+          Light takes its values from PINTEREST-DESIGN.md: warm cream chrome, true white canvas, one red action,
+          16px radii, pill chips.
+          Dark takes its values from FERRARI-DESIGN.md: near-black canvas, white type, one red action,
+          square corners, uppercase letter-spaced buttons.
+          Both specify FerrariSans or Pin Sans, which are proprietary, so Inter stands in for both.
+        */
+        :root[data-theme="light"] {
+            --page: #ffffff;
+            --chrome: #ffffff;
+            --chrome-text: #000000;
+            --chrome-mute: #62625b;
+            --hero-bg: #ffffff;
+            --h1-size: 28px;
+            --hero-text: #000000;
+            --hero-sub: #33332e;
+            --card: #f6f6f3;
+            --card-border: transparent;
+            --hairline: #dadad3;
+            --text: #000000;
+            --body: #33332e;
+            --mute: #62625b;
+            --accent: #e60023;
+            --accent-text: #ffffff;
+            --accent-pressed: #cc001f;
+            --btn2-bg: #e5e5e0;
+            --btn2-text: #000000;
+            --btn2-border: transparent;
+            --btn2-pressed: #c8c8c1;
+            --field-bg: #ffffff;
+            --field-border: #91918c;
+            --field-radius: 16px;
+            --focus: #435ee5;
+            --radius-card: 16px;
+            --radius-btn: 16px;
+            --btn-height: 40px;
+            --btn-size: 14px;
+            --btn-tracking: 0;
+            --btn-transform: none;
+            --h1-weight: 600;
+            --h1-tracking: -1.2px;
+            --meter-track: #e5e5e0;
+            --meter-fill: #000000;
+            --warn: #9e0a0a;
+            --ok: #103c25;
+            --ok-bg: #c7f0da;
+            --status-bg: #f6f6f3;
+            --preview-bg: #f6f6f3;
+            --tab-active: #e60023;
+            --tab-idle: #62625b;
+        }
+
+        :root[data-theme="dark"] {
+            --page: #181818;
+            --chrome: #181818;
+            --chrome-text: #ffffff;
+            --chrome-mute: #969696;
+            --hero-bg: #181818;
+            --hero-text: #ffffff;
+            --hero-sub: #b8b8b8;
+            --card: #303030;
+            --card-border: transparent;
+            --hairline: #303030;
+            --text: #ffffff;
+            --body: #b8b8b8;
+            --mute: #a6a6a6;
+            --h1-size: 36px;
+            --accent: #da291c;
+            --accent-text: #ffffff;
+            --accent-pressed: #b01e0a;
+            --btn2-bg: transparent;
+            --btn2-text: #ffffff;
+            --btn2-border: #ffffff;
+            --btn2-pressed: #303030;
+            --field-bg: #181818;
+            --field-border: #666666;
+            --field-radius: 4px;
+            --focus: #f6e500;
+            --radius-card: 0;
+            --radius-btn: 0;
+            --btn-height: 44px;
+            --btn-size: 14px;
+            --btn-tracking: 1.4px;
+            --btn-transform: uppercase;
+            --h1-weight: 500;
+            --h1-tracking: -0.36px;
+            --meter-track: #303030;
+            --meter-fill: #ffffff;
+            --warn: #f13a2c;
+            --ok: #03904a;
+            --ok-bg: transparent;
+            --status-bg: #303030;
+            --preview-bg: #181818;
+            --tab-active: #da291c;
+            --tab-idle: #8f8f8f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Inter, Arial, Helvetica, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            color: var(--body);
+            background: var(--page);
+            min-height: 100vh;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* Top chrome: the utility bar and the header stay in view while the page scrolls */
+        .chrome {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: var(--chrome);
+        }
+
+        /* Utility bar: a small line of text and the theme toggle */
+        .utility-bar {
+            min-height: 36px;
+            background: var(--chrome);
+            color: var(--chrome-mute);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 48px;
+        }
+
+        .theme-toggle {
+            height: 28px;
+            padding: 0 14px;
+            background: var(--btn2-bg);
+            color: var(--btn2-text);
+            border: 1px solid var(--btn2-border);
+            border-radius: var(--radius-btn);
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: var(--btn-tracking);
+            text-transform: var(--btn-transform);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .theme-toggle:active {
+            background: var(--btn2-pressed);
+        }
+
+        /* Primary nav: wordmark left, tabs centre */
+        .primary-nav {
+            height: 64px;
+            background: var(--chrome);
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            padding: 0 48px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--chrome-text);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .brand-mark {
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: var(--radius-btn);
+            flex: none;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 24px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--tab-idle);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: var(--btn-tracking);
+            text-transform: var(--btn-transform);
+            padding: 20px 4px 18px;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            color: var(--chrome-text);
+            border-bottom-color: var(--tab-active);
+        }
+
+        /* Hero band: each tab opens on its own headline */
+        .hero-chapter {
+            background: var(--hero-bg);
+            color: var(--hero-text);
+            padding: 64px 48px;
+        }
+
+        .hero-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        h1 {
+            font-size: var(--h1-size);
+            font-weight: var(--h1-weight);
+            line-height: 1.2;
+            letter-spacing: var(--h1-tracking);
+            color: var(--hero-text);
+        }
+
+        .sub {
+            margin-top: 12px;
+            font-size: 16px;
+            color: var(--hero-sub);
+            max-width: 560px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .body-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+        }
+
+        /* Bento: tiles of mixed size on one grid */
+        .bento {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .tile {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-card);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .tile-wide {
+            grid-column: span 2;
+        }
+
+        .tile-full {
+            grid-column: 1 / -1;
+        }
+
+        form {
+            display: contents;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tile-title {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--text);
+        }
+
+        label {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        input[type="file"],
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            background: var(--field-bg);
+            color: var(--text);
+            border: 1px solid var(--field-border);
+            border-radius: var(--field-radius);
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.5;
+            padding: 10px 16px;
+        }
+
+        input[type="text"],
+        select {
+            height: 44px;
+        }
+
+        input[type="file"] {
+            height: 44px;
+            padding: 6px 12px;
+        }
+
+        input[type="file"]::file-selector-button {
+            margin-right: 12px;
+            padding: 6px 14px;
+            background: var(--btn2-bg);
+            color: var(--btn2-text);
+            border: 1px solid var(--btn2-border);
+            border-radius: var(--radius-btn);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: var(--btn-tracking);
+            text-transform: var(--btn-transform);
+            cursor: pointer;
+        }
+
+        select option {
+            background: var(--page);
+            color: var(--text);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        textarea[readonly] {
+            background: var(--preview-bg);
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        button:focus-visible,
+        .tab-btn:focus-visible,
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--mute);
+        }
+
+        .char-counter {
+            font-size: 14px;
+            color: var(--mute);
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            height: var(--btn-height);
+            padding: 0 24px;
+            background: var(--accent);
+            color: var(--accent-text);
+            border: none;
+            border-radius: var(--radius-btn);
+            font-size: var(--btn-size);
+            font-weight: 700;
+            letter-spacing: var(--btn-tracking);
+            text-transform: var(--btn-transform);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-primary:active:not(:disabled) {
+            background: var(--accent-pressed);
+        }
+
+        .btn-secondary {
+            height: var(--btn-height);
+            padding: 0 22px;
+            background: var(--btn2-bg);
+            color: var(--btn2-text);
+            border: 1px solid var(--btn2-border);
+            border-radius: var(--radius-btn);
+            font-size: var(--btn-size);
+            font-weight: 700;
+            letter-spacing: var(--btn-tracking);
+            text-transform: var(--btn-transform);
+            cursor: pointer;
+            align-self: flex-start;
+        }
+
+        .btn-secondary:active:not(:disabled) {
+            background: var(--btn2-pressed);
+        }
+
+        /* Hover colour: the lift and press motion come from GSAP in the script */
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-pressed);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--btn2-pressed);
+        }
+
+        .theme-toggle:hover {
+            background: var(--btn2-pressed);
+        }
+
+        .tab-btn:hover {
+            color: var(--chrome-text);
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .preview-empty {
+            font-size: 16px;
+            color: var(--mute);
+        }
+
+        .preview-img {
+            display: block;
+            width: 100%;
+            max-height: 260px;
+            object-fit: contain;
+            border-radius: var(--field-radius);
+            background: var(--preview-bg);
+        }
+
+        .preview-img[hidden] {
+            display: none;
+        }
+
+        .dims {
+            font-size: 14px;
+            color: var(--mute);
+        }
+
+        /* Capacity: the screen's one figure, large */
+        .capacity-figure {
+            font-size: 40px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text);
+        }
+
+        .capacity-figure[data-empty="true"] {
+            color: var(--mute);
+        }
+
+        .meter {
+            height: 6px;
+            background: var(--meter-track);
+            border-radius: var(--radius-btn);
+            overflow: hidden;
+        }
+
+        .meter span {
+            display: block;
+            height: 100%;
+            width: 0;
+            background: var(--meter-fill);
+        }
+
+        .meter.over span {
+            background: var(--warn);
+        }
+
+        .capacity-max {
+            font-size: 14px;
+            color: var(--mute);
+        }
+
+        .capacity-text {
+            font-size: 15px;
+            color: var(--body);
+        }
+
+        .capacity-text.over {
+            color: var(--warn);
+        }
+
+        /* The action sits where the form ends, so the user's next move is short */
+        .action-row {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 16px;
+        }
+
+        /* In the action row the reset keeps its natural width at the right; the primary action takes the rest */
+        .action-row .btn-secondary {
+            flex: none;
+            align-self: center;
+        }
+
+        .status {
+            padding: 14px 24px;
+            background: var(--status-bg);
+            color: var(--body);
+            border-radius: var(--radius-card);
+            font-size: 16px;
+            min-height: 20px;
+        }
+
+        .status:empty {
+            display: none;
+        }
+
+        .status.success {
+            background: var(--ok-bg);
+            color: var(--ok);
+            font-weight: 700;
+        }
+
+        .status.error {
+            color: var(--warn);
+            font-weight: 700;
+        }
+
+        .note-title {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text);
+        }
+
+        .note-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--body);
+        }
+
+        /* Footer band */
+        .footer-section {
+            background: var(--chrome);
+            color: var(--chrome-mute);
+            padding: 32px 48px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .footer-section strong {
+            color: var(--chrome-text);
+            font-weight: 700;
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+
+        /* Developer FAB: a floating action button bottom right, with a card that opens above it */
+        .dev-fab {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 40;
+            width: 52px;
+            height: 52px;
+            display: grid;
+            place-items: center;
+            padding: 0;
+            background: var(--accent);
+            color: var(--accent-text);
+            border: none;
+            border-radius: var(--radius-btn);
+            box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .dev-fab:hover {
+            background: var(--accent-pressed);
+        }
+
+        .dev-fab svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .dev-fab:focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 3px;
+        }
+
+        .dev-card {
+            position: fixed;
+            right: 24px;
+            bottom: 88px;
+            z-index: 40;
+            width: min(320px, calc(100vw - 32px));
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 20px;
+            background: var(--card);
+            color: var(--text);
+            border-radius: var(--radius-card);
+            box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.35);
+        }
+
+        .dev-card[hidden] {
+            display: none;
+        }
+
+        .dev-card-name {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text);
+        }
+
+        @media (max-width: 1080px) {
+            .bento {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767px) {
+            .utility-bar {
+                padding: 12px 16px;
+                flex-wrap: wrap;
+            }
+
+            .primary-nav {
+                grid-template-columns: 1fr;
+                height: auto;
+                padding: 16px;
+                gap: 12px;
+                justify-items: start;
+            }
+
+            .nav-tabs {
+                gap: 20px;
+            }
+
+            .hero-chapter {
+                padding: 40px 16px;
+            }
+
+            .hero-inner {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .body-inner {
+                padding: 32px 16px 48px;
+            }
+
+            .bento {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .tile-wide,
+            .tile-full {
+                grid-column: 1;
+            }
+
+            .capacity-figure {
+                font-size: 32px;
+            }
+
+            .footer-section {
+                flex-direction: column;
+                padding: 24px 16px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.14.2/gsap.min.js"></script>
+    <script>
+        // If the GSAP CDN is blocked, the page still works: animations become instant and the meter still moves
+        if (!window.gsap) {
+            window.gsap = {
+                to(el, vars) { if (vars.width) el.style.width = vars.width; },
+                from() {},
+                fromTo(el, from, to) { if (to.width) el.style.width = to.width; }
+            };
+        }
+    </script>
+</head>
+<body>
+    <div class="chrome">
+    <div class="utility-bar">
+        <span>Lossless formats only. JPEG would destroy the hidden message.</span>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+    </div>
+
+    <header class="primary-nav">
+        <div class="brand"><span class="brand-mark" aria-hidden="true"></span>ImgSecrets</div>
+        <nav class="nav-tabs" aria-label="Primary">
+            <button class="tab-btn active" data-tab="encode">Encode</button>
+            <button class="tab-btn" data-tab="decode">Decode</button>
+        </nav>
+        <span></span>
+    </header>
+    </div>
+
+    <main>
+        <!-- ENCODE TAB -->
+        <div id="encode" class="tab-content active">
+            <section class="hero-chapter">
+                <div class="hero-inner">
+                    <div>
+                        <h1>Encode a message</h1>
+                        <p class="sub">Hide a secret message in an image using LSB steganography, then download the encoded file.</p>
+                    </div>
+                                    </div>
+            </section>
+
+            <div class="body-inner">
+                <div class="bento">
+                    <form id="encodeForm">
+                        <div class="tile tile-wide">
+                            <div class="form-group">
+                                <label for="image">Image file</label>
+                                <input type="file" id="image" accept="image/*" required>
+                                <p class="info-text">Select a PNG, BMP, TIFF or any lossless image format</p>
+                            </div>
+                        </div>
+
+                        <div class="tile tile-wide" aria-live="polite">
+                            <div class="tile-title">Preview</div>
+                            <p id="preview-empty" class="preview-empty">The chosen image appears here.</p>
+                            <img id="preview-img" class="preview-img" alt="Image preview" hidden>
+                            <p id="image-dimensions" class="dims"></p>
+                        </div>
+
+                        <div class="tile tile-wide">
+                            <div class="form-group">
+                                <label for="message">Secret message</label>
+                                <textarea id="message" required placeholder="Enter your secret message here..."></textarea>
+                                <div class="char-counter"><span id="char-count">0</span> characters</div>
+                            </div>
+                        </div>
+
+                        <div class="tile" aria-live="polite">
+                            <div class="tile-title">Capacity</div>
+                            <div id="capacity-figure" class="capacity-figure" data-empty="true"><span id="capacity-used">—</span></div>
+                            <div class="meter" id="meter"><span id="meter-fill"></span></div>
+                            <p id="capacity-max" class="capacity-max"></p>
+                            <p id="capacity-text" class="capacity-text">Choose an image to see how much it can hold.</p>
+                        </div>
+
+                        <div class="tile">
+                            <div class="form-group">
+                                <label for="filename">Output filename</label>
+                                <input type="text" id="filename" placeholder="my_secret_image" required>
+                                <p class="info-text">Don't include the file extension. It is added automatically.</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="extension">Output format</label>
+                                <select id="extension" required>
+                                    <option value="png" selected>PNG (recommended)</option>
+                                    <option value="bmp">BMP</option>
+                                    <option value="tiff">TIFF</option>
+                                </select>
+                                <p class="info-text">Lossless formats only. JPEG would destroy the hidden message.</p>
+                            </div>
+                        </div>
+
+                        <div class="action-row">
+                            <button id="encodeSubmit" class="btn-primary w-100" type="submit">Encode &amp; download</button>
+                            <button id="encodeReset" class="btn-secondary" type="button">Reset form</button>
+                        </div>
+
+                        <div id="encodeStatus" class="status tile-full"></div>
+                    </form>
+
+                    <div class="tile">
+                        <div class="note-title">Bits per character</div>
+                        <p class="note-text">Each character is eight bits, written one bit to each colour channel of three pixels. A ninth channel marks where the message ends.</p>
+                    </div>
+                    <div class="tile">
+                        <div class="note-title">How much fits</div>
+                        <p class="note-text">A character takes three pixels, so a 1920 × 1080 image holds 691,200 characters.</p>
+                    </div>
+                    <div class="tile tile-wide">
+                        <div class="note-title">Which formats</div>
+                        <p class="note-text">Use PNG, BMP or TIFF. JPEG re-compresses the pixels and destroys the hidden bits.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DECODE TAB -->
+        <div id="decode" class="tab-content">
+            <section class="hero-chapter">
+                <div class="hero-inner">
+                    <div>
+                        <h1>Decode a message</h1>
+                        <p class="sub">Read the hidden message back out of an image made with this tool.</p>
+                    </div>
+                                    </div>
+            </section>
+
+            <div class="body-inner">
+                <div class="bento">
+                    <form id="decodeForm">
+                        <div class="tile tile-wide">
+                            <div class="form-group">
+                                <label for="decodeImage">Encoded image</label>
+                                <input type="file" id="decodeImage" accept="image/*" required>
+                                <p class="info-text">Select an image that contains a hidden message</p>
+                            </div>
+                        </div>
+
+                        <div class="tile tile-wide">
+                            <div class="tile-title">How it reads the image</div>
+                            <p class="note-text">The tool reads one bit from each colour channel, three pixels per character, until it reaches the end marker. An image with no message gives no valid text.</p>
+                        </div>
+
+                        <div class="action-row">
+                            <button id="decodeSubmit" class="btn-primary w-100" type="submit">Decode</button>
+                            <button id="decodeReset" class="btn-secondary" type="button">Reset form</button>
+                        </div>
+
+                        <div id="decodeStatus" class="status tile-full"></div>
+                    </form>
+
+                    <div id="resultGroup" class="tile tile-full" style="display: none;">
+                        <label for="decodeResult">Hidden message</label>
+                        <textarea id="decodeResult" class="w-100" readonly placeholder="Hidden message will appear here"></textarea>
+                        <button id="copyBtn" class="btn-secondary" type="button">Copy to clipboard</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer-section">
+        <span><strong>ImgSecrets</strong> · LSB steganography with a FastAPI and Pillow backend</span>
+        <span>Lossless output only · Nothing is stored</span>
+    </footer>
+
+    <button id="devFab" class="dev-fab" type="button" aria-expanded="false" aria-controls="devCard" aria-label="About the developer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
+        </svg>
+    </button>
+
+    <aside id="devCard" class="dev-card" hidden aria-labelledby="devName">
+        <div id="devName" class="dev-card-name">Krishan Vikash Lal</div>
+        <p class="info-text">Developer of ImgSecrets</p>
+        <p class="note-text">Built with FastAPI, Pillow and GSAP.</p>
+    </aside>
+
+    <script>
+        // ==================== THEME TOGGLE ====================
+        const themeToggle = document.getElementById("themeToggle");
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute("data-theme", theme);
+            const dark = theme === "dark";
+            themeToggle.textContent = dark ? "Light mode" : "Dark mode";
+            themeToggle.setAttribute("aria-pressed", String(dark));
+            try {
+                localStorage.setItem("imgsecrets-theme", theme);
+            } catch (e) { /* storage unavailable: the choice lasts this visit only */ }
+        }
+
+        applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+
+        themeToggle.addEventListener("click", () => {
+            const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            applyTheme(next);
+        });
+
+        // ==================== MOTION ====================
+        // With reduced motion on, every duration drops to zero so the page shows its final state at once
+        const motionOK = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const dur = (seconds) => (motionOK ? seconds : 0);
+
+        // Entrance for a tab: the headline and intro rise in, then the tiles stagger in
+        function animateTab(tabId) {
+            const tab = document.getElementById(tabId);
+            gsap.fromTo(tab.querySelectorAll(".hero-inner > div > *"),
+                { opacity: 0, y: 24 },
+                { opacity: 1, y: 0, duration: dur(0.6), stagger: 0.1, ease: "power3.out", clearProps: "transform" });
+            gsap.fromTo(tab.querySelectorAll(".tile"),
+                { opacity: 0, y: 32 },
+                { opacity: 1, y: 0, duration: dur(0.5), stagger: 0.06, delay: dur(0.15), ease: "power2.out", clearProps: "transform" });
+            gsap.fromTo(tab.querySelectorAll(".btn-primary, .btn-secondary"),
+                { opacity: 0, y: 12 },
+                { opacity: 1, y: 0, duration: dur(0.45), stagger: 0.08, delay: dur(0.3), ease: "power2.out", clearProps: "transform,opacity" });
+        }
+
+        // Button hover: a small lift on hover and a press on click. Disabled buttons stay still.
+        document.querySelectorAll(".btn-primary, .btn-secondary, .theme-toggle, .tab-btn").forEach((btn) => {
+            btn.addEventListener("pointerenter", () => {
+                if (!motionOK || btn.disabled) return;
+                gsap.to(btn, { y: -2, duration: 0.2, ease: "power2.out", overwrite: "auto" });
+            });
+            btn.addEventListener("pointerleave", () => {
+                gsap.to(btn, { y: 0, scale: 1, duration: dur(0.25), ease: "power2.out", overwrite: "auto" });
+            });
+            btn.addEventListener("pointerdown", () => {
+                if (!motionOK || btn.disabled) return;
+                gsap.to(btn, { scale: 0.97, duration: 0.1, ease: "power1.out", overwrite: "auto" });
+            });
+            btn.addEventListener("pointerup", () => {
+                if (!motionOK) return;
+                gsap.to(btn, { scale: 1, y: btn.matches(":hover") ? -2 : 0, duration: 0.2, ease: "power2.out", overwrite: "auto" });
+            });
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+                document.getElementById(tabName).classList.add('active');
+                e.target.classList.add('active');
+                animateTab(tabName);
+            });
+        });
+
+        // ==================== ENCODE SECTION ====================
+        const encodeForm = document.getElementById("encodeForm");
+        const encodeStatus = document.getElementById("encodeStatus");
+        const encodeBtn = document.getElementById("encodeSubmit");
+        const imageInput = document.getElementById("image");
+        const messageInput = document.getElementById("message");
+        const charCountEl = document.getElementById("char-count");
+        const previewEmptyEl = document.getElementById("preview-empty");
+        const previewImg = document.getElementById("preview-img");
+        const imageDimensionsEl = document.getElementById("image-dimensions");
+        const capacityFigureEl = document.getElementById("capacity-figure");
+        const capacityUsedEl = document.getElementById("capacity-used");
+        const capacityMaxEl = document.getElementById("capacity-max");
+        const meterEl = document.getElementById("meter");
+        const meterFillEl = document.getElementById("meter-fill");
+        const capacityTextEl = document.getElementById("capacity-text");
+
+        // Characters the chosen image can hold: one per three pixels, as the backend encodes
+        let maxChars = 0;
+
+        // Keep the capacity tile in step with the message and the image
+        function updateCapacity() {
+            const used = messageInput.value.length;
+            charCountEl.textContent = used;
+
+            if (!maxChars) {
+                capacityFigureEl.dataset.empty = "true";
+                capacityMaxEl.textContent = "";
+                capacityUsedEl.textContent = "—";
+                gsap.to(meterFillEl, { width: "0%", duration: dur(0.4), ease: "power2.out", overwrite: true });
+                meterEl.classList.remove("over");
+                capacityTextEl.className = "capacity-text";
+                capacityTextEl.textContent = "Choose an image to see how much it can hold.";
+                return;
+            }
+
+            const pct = used / maxChars * 100;
+            const over = used > maxChars;
+            capacityFigureEl.dataset.empty = "false";
+            capacityUsedEl.textContent = used.toLocaleString();
+            capacityMaxEl.textContent = "of " + maxChars.toLocaleString() + " characters";
+            gsap.to(meterFillEl, { width: Math.min(pct, 100) + "%", duration: dur(0.4), ease: "power2.out", overwrite: true });
+            meterEl.classList.toggle("over", over);
+            capacityTextEl.className = over ? "capacity-text over" : "capacity-text";
+            capacityTextEl.textContent = over
+                ? "Over capacity by " + (used - maxChars).toLocaleString() + " characters. Choose a larger image or shorten the message."
+                : pct.toFixed(1) + "% of this image is used.";
+        }
+
+        // Update character counter
+        messageInput.addEventListener("input", updateCapacity);
+
+        // Handle image preview and capacity
+        imageInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                previewImg.hidden = true;
+                previewImg.removeAttribute("src");
+                previewEmptyEl.hidden = false;
+                imageDimensionsEl.textContent = "";
+                maxChars = 0;
+                updateCapacity();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    previewImg.src = event.target.result;
+                    previewImg.hidden = false;
+                    gsap.fromTo(previewImg, { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: dur(0.45), ease: "power2.out", clearProps: "transform" });
+                    previewEmptyEl.hidden = true;
+                    imageDimensionsEl.textContent = `${img.width} × ${img.height} px`;
+
+                    maxChars = Math.floor((img.width * img.height) / 3);
+                    updateCapacity();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        encodeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const image = imageInput.files[0];
+            const message = messageInput.value;
+            const filename = document.getElementById("filename").value;
+            const extension = document.getElementById("extension").value;
+
+            if (!image) {
+                encodeStatus.textContent = "Error: Please select an image.";
+                encodeStatus.className = "status tile-full error";
+                return;
+            }
+
+            if (!message) {
+                encodeStatus.textContent = "Error: Message is empty.";
+                encodeStatus.className = "status tile-full error";
+                return;
+            }
+
+            if (!filename) {
+                encodeStatus.textContent = "Error: Please enter an output filename.";
+                encodeStatus.className = "status tile-full error";
+                return;
+            }
+
+            encodeStatus.textContent = "Encoding…";
+            encodeStatus.className = "status tile-full";
+            encodeBtn.disabled = true;
+            encodeResetBtn.disabled = true;
+
+            const data = new FormData();
+            data.append("image", image);
+            data.append("message", message);
+            data.append("filename", filename);
+            data.append("extension", extension);
+
+            try {
+                const res = await fetch("/encode", { method: "POST", body: data });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: "Something went wrong." }));
+                    encodeStatus.textContent = "Error: " + (err.detail || "Encoding failed.");
+                    encodeStatus.className = "status tile-full error";
+                    return;
+                }
+
+                // Trigger download
+                const blob = await res.blob();
+                const disposition = res.headers.get("Content-Disposition") || "";
+                const match = disposition.match(/filename="(.+?)"/);
+                const name = match ? match[1] : "encoded.png";
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                encodeStatus.textContent = "Success. Downloaded " + name;
+                encodeStatus.className = "status tile-full success";
+            } catch (error) {
+                encodeStatus.textContent = "Error: Could not reach the server.";
+                encodeStatus.className = "status tile-full error";
+            } finally {
+                encodeBtn.disabled = false;
+                encodeResetBtn.disabled = false;
+            }
+        });
+
+        // Reset the encode form: clears the file, preview, message, filename, format and status
+        const encodeResetBtn = document.getElementById("encodeReset");
+
+        encodeResetBtn.addEventListener("click", () => {
+            encodeForm.reset(); // form.reset() does not fire change events, so the preview is cleared by hand below
+            previewImg.hidden = true;
+            previewImg.removeAttribute("src");
+            previewEmptyEl.hidden = false;
+            imageDimensionsEl.textContent = "";
+            maxChars = 0;
+            encodeStatus.textContent = "";
+            encodeStatus.className = "status tile-full";
+            updateCapacity();
+            imageInput.focus();
+        });
+
+        // ==================== DECODE SECTION ====================
+        const decodeForm = document.getElementById("decodeForm");
+        const decodeStatus = document.getElementById("decodeStatus");
+        const decodeBtn = document.getElementById("decodeSubmit");
+        const decodeResult = document.getElementById("decodeResult");
+        const resultGroup = document.getElementById("resultGroup");
+        const copyBtn = document.getElementById("copyBtn");
+
+        decodeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            decodeStatus.textContent = "Decoding…";
+            decodeStatus.className = "status tile-full";
+            decodeResult.value = "";
+            resultGroup.style.display = "none";
+            decodeBtn.disabled = true;
+
+            const decodeImage = document.getElementById("decodeImage");
+            const file = decodeImage.files[0];
+
+            if (!file) {
+                decodeStatus.textContent = "Error: Please select an image.";
+                decodeStatus.className = "status tile-full error";
+                decodeBtn.disabled = false;
+                return;
+            }
+
+            const data = new FormData();
+            data.append("image", file);
+
+            try {
+                const res = await fetch("/decode", { method: "POST", body: data });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: "Decoding failed." }));
+                    decodeStatus.textContent = "Error: " + (err.detail || "Decoding failed.");
+                    decodeStatus.className = "status tile-full error";
+                    decodeBtn.disabled = false;
+                    return;
+                }
+                const result = await res.json();
+                if (result.found) {
+                    decodeResult.value = result.message;
+                    resultGroup.style.display = "flex";
+                    gsap.fromTo(resultGroup, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: dur(0.5), ease: "power2.out", clearProps: "transform" });
+                    decodeStatus.textContent = "Message found.";
+                    decodeStatus.className = "status tile-full success";
+                } else {
+                    decodeStatus.textContent = "No valid message found in this image.";
+                    decodeStatus.className = "status tile-full";
+                }
+            } catch {
+                decodeStatus.textContent = "Error: Could not reach the server.";
+                decodeStatus.className = "status tile-full error";
+            } finally {
+                decodeBtn.disabled = false;
+            }
+        });
+
+        // Reset the decode form: clears the file, the hidden message and the status
+        const decodeResetBtn = document.getElementById("decodeReset");
+
+        decodeResetBtn.addEventListener("click", () => {
+            decodeForm.reset();
+            decodeResult.value = "";
+            resultGroup.style.display = "none";
+            decodeStatus.textContent = "";
+            decodeStatus.className = "status tile-full";
+            document.getElementById("decodeImage").focus();
+        });
+
+        copyBtn.addEventListener("click", () => {
+            decodeResult.select();
+            navigator.clipboard.writeText(decodeResult.value).then(() => {
+                copyBtn.textContent = "Copied";
+                setTimeout(() => {
+                    copyBtn.textContent = "Copy to clipboard";
+                }, 2000);
+            });
+        });
+
+        // ==================== DEVELOPER CARD ====================
+        const devFab = document.getElementById("devFab");
+        const devCard = document.getElementById("devCard");
+
+        function setDevCard(open) {
+            devFab.setAttribute("aria-expanded", String(open));
+            if (open) {
+                devCard.hidden = false;
+                gsap.fromTo(devCard,
+                    { opacity: 0, y: 12, scale: 0.97 },
+                    { opacity: 1, y: 0, scale: 1, duration: dur(0.3), ease: "power2.out", clearProps: "transform", overwrite: true });
+            } else {
+                gsap.to(devCard, {
+                    opacity: 0, y: 8, duration: dur(0.2), ease: "power2.in", overwrite: true,
+                    onComplete: () => { devCard.hidden = true; }
+                });
+            }
+        }
+
+        devFab.addEventListener("click", () => setDevCard(devCard.hidden));
+
+        // Close on Escape or on any click outside the card and the button
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !devCard.hidden) {
+                setDevCard(false);
+                devFab.focus();
+            }
+        });
+
+        document.addEventListener("pointerdown", (e) => {
+            if (!devCard.hidden && !devCard.contains(e.target) && !devFab.contains(e.target)) {
+                setDevCard(false);
+            }
+        });
+
+        // Page entrance: the utility bar and nav drop in, then the first tab animates in
+        gsap.from(devFab, { opacity: 0, scale: 0.6, duration: dur(0.5), delay: dur(0.6), ease: "back.out(1.7)", clearProps: "transform,opacity" });
+        gsap.from(".utility-bar, .primary-nav", { opacity: 0, y: -10, duration: dur(0.5), stagger: 0.08, ease: "power2.out", clearProps: "transform" });
+        gsap.from(".theme-toggle, .tab-btn", { opacity: 0, y: -8, duration: dur(0.4), stagger: 0.06, delay: dur(0.2), ease: "power2.out", clearProps: "transform,opacity" });
+        animateTab("encode");
+
+        updateCapacity();
+    </script>
+</body>
+</html>
