@@ -34,7 +34,7 @@ Used in a browser, in one visit: pick an image, type a message, name the file, c
 
 ## Brand Commitments
 
-None fixed. The name is ImgSecrets; there is no logo, voice or visual identity to preserve. The owner confirmed no brand yet.
+None fixed. The name is HushPix; there is no logo, voice or visual identity to preserve. The owner confirmed no brand yet.
 
 ## Evidence on Hand
 
